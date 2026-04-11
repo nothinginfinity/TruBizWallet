@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── TrueBuild Credit Wallet palette ──────────────────────────
+       Navy + Gold fintech — precision, trust, wealth-building.
+       Primary: deep navy. Accent: TrueBuild gold.
+       Surfaces: clean off-whites with warm undertone.
+    ─────────────────────────────────────────────────────────────── */
+
+    /* shadcn-expected variables */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 222 58% 20%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 42 96% 50%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 222 58% 20%;
+
+    --radius: 0.625rem;
+
+    /* Chart palette */
+    --chart-1: 222 58% 28%;
+    --chart-2: 42 96% 50%;
+    --chart-3: 160 60% 38%;
+    --chart-4: 280 50% 55%;
+    --chart-5: 0 72% 51%;
+
+    /* App-specific tokens */
+    --color-navy: 222 58% 20%;
+    --color-gold: 42 96% 50%;
+    --color-success: 160 60% 38%;
+    --color-warning: 38 92% 50%;
+    --color-danger: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 222 35% 8%;
+    --foreground: 220 14% 88%;
+
+    --card: 222 30% 11%;
+    --card-foreground: 220 14% 88%;
+
+    --popover: 222 30% 11%;
+    --popover-foreground: 220 14% 88%;
+
+    --primary: 42 96% 55%;
+    --primary-foreground: 222 47% 8%;
+
+    --secondary: 222 25% 16%;
+    --secondary-foreground: 220 14% 88%;
+
+    --muted: 222 25% 16%;
+    --muted-foreground: 220 9% 55%;
+
+    --accent: 222 58% 30%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 20% 20%;
+    --input: 222 20% 20%;
+    --ring: 42 96% 55%;
+
+    --chart-1: 42 96% 55%;
+    --chart-2: 188 60% 52%;
+    --chart-3: 160 55% 45%;
+    --chart-4: 280 45% 62%;
+    --chart-5: 0 65% 58%;
+  }
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', 'DM Sans', system-ui, sans-serif;
+    --font-serif: 'Georgia', serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+}
+
+/* Card gradient backgrounds for credit cards */
+.card-gradient-navy    { background: linear-gradient(135deg, #1a2f5a 0%, #0f1e3d 100%); }
+.card-gradient-purple  { background: linear-gradient(135deg, #5b21b6 0%, #3730a3 100%); }
+.card-gradient-gold    { background: linear-gradient(135deg, #b45309 0%, #92400e 100%); }
+.card-gradient-teal    { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); }
+.card-gradient-slate   { background: linear-gradient(135deg, #475569 0%, #334155 100%); }
+.card-gradient-emerald { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
+
+/* Utilization ring colors */
+.util-good    { color: hsl(160 60% 38%); }
+.util-caution { color: hsl(38 92% 50%); }
+.util-danger  { color: hsl(0 72% 51%); }
+
+/* Smooth transitions */
+* {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 9999px; }
