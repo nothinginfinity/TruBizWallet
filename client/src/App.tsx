@@ -1,4 +1,4 @@
-import { Switch, Route, Router, useLocation } from "wouter";
+import { Switch, Route, Router, useLocation, Redirect } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -52,8 +52,8 @@ function IconScore({ active }: { active: boolean }) {
 }
 
 const TABS = [
-  { href: "/",           label: "Home",      Icon: IconDashboard },
-  { href: "/wallet",     label: "Wallet",    Icon: IconWallet },
+  { href: "/wallet",     label: "Home",      Icon: IconWallet },
+  { href: "/dashboard",  label: "Dashboard", Icon: IconDashboard },
   { href: "/reminders",  label: "Reminders", Icon: IconBell },
   { href: "/scoreboard", label: "Score",     Icon: IconScore },
 ];
@@ -64,9 +64,7 @@ function BottomTabBar() {
   return (
     <nav className="tab-bar" role="tablist">
       {TABS.map(({ href, label, Icon }) => {
-        const active = href === "/" 
-          ? location === "/" || location === "" 
-          : location === href || location.startsWith(href + "/");
+        const active = location === href || location.startsWith(href + "/");
         return (
           <a
             key={href}
@@ -96,8 +94,9 @@ function AppLayout() {
   return (
     <div className="min-h-dvh bg-background">
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/"><Redirect to="/wallet" /></Route>
         <Route path="/wallet" component={Wallet} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/reminders" component={Reminders} />
         <Route path="/scoreboard" component={Scoreboard} />
         <Route component={NotFound} />
