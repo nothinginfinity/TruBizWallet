@@ -1,5 +1,5 @@
 const CACHE = 'creditstack-v1';
-const STATIC = ['/'];
+const STATIC = ['/TruBizWallet/'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
