@@ -4,146 +4,328 @@
 
 @layer base {
   :root {
-    /* ── TrueBuild Credit Wallet palette ──────────────────────────
-       Navy + Gold fintech — precision, trust, wealth-building.
-       Primary: deep navy. Accent: TrueBuild gold.
-       Surfaces: clean off-whites with warm undertone.
-    ─────────────────────────────────────────────────────────────── */
+    /* ── CreditStack Apple-Wallet palette ────────────────────────────
+       Deep dark surfaces, gold accent, translucent glass layers.
+       Inspired by Apple Wallet's polished dark-glass aesthetic.
+    ──────────────────────────────────────────────────────────────── */
 
-    /* shadcn-expected variables */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* shadcn-expected variables — dark-first, always dark */
+    --background: 240 15% 4%;
+    --foreground: 0 0% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 240 12% 8%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 240 12% 10%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 222 58% 20%;
-    --primary-foreground: 0 0% 100%;
+    /* Gold primary */
+    --primary: 43 90% 52%;
+    --primary-foreground: 240 20% 6%;
 
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 240 10% 14%;
+    --secondary-foreground: 0 0% 80%;
 
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 55%;
 
-    --accent: 42 96% 50%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 240 10% 18%;
+    --accent-foreground: 0 0% 95%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 222 58% 20%;
+    --border: 240 8% 16%;
+    --input: 240 8% 14%;
+    --ring: 43 90% 52%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
-    /* Chart palette */
-    --chart-1: 222 58% 28%;
-    --chart-2: 42 96% 50%;
-    --chart-3: 160 60% 38%;
-    --chart-4: 280 50% 55%;
-    --chart-5: 0 72% 51%;
-
-    /* App-specific tokens */
-    --color-navy: 222 58% 20%;
-    --color-gold: 42 96% 50%;
-    --color-success: 160 60% 38%;
-    --color-warning: 38 92% 50%;
-    --color-danger: 0 72% 51%;
-  }
-
-  .dark {
-    --background: 222 35% 8%;
-    --foreground: 220 14% 88%;
-
-    --card: 222 30% 11%;
-    --card-foreground: 220 14% 88%;
-
-    --popover: 222 30% 11%;
-    --popover-foreground: 220 14% 88%;
-
-    --primary: 42 96% 55%;
-    --primary-foreground: 222 47% 8%;
-
-    --secondary: 222 25% 16%;
-    --secondary-foreground: 220 14% 88%;
-
-    --muted: 222 25% 16%;
-    --muted-foreground: 220 9% 55%;
-
-    --accent: 222 58% 30%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 222 20% 20%;
-    --input: 222 20% 20%;
-    --ring: 42 96% 55%;
-
-    --chart-1: 42 96% 55%;
+    /* Charts */
+    --chart-1: 43 90% 52%;
     --chart-2: 188 60% 52%;
     --chart-3: 160 55% 45%;
     --chart-4: 280 45% 62%;
     --chart-5: 0 65% 58%;
+
+    /* App tokens */
+    --color-gold: 43 90% 52%;
+    --color-success: 160 55% 45%;
+    --color-warning: 38 92% 55%;
+    --color-danger: 0 72% 55%;
+    --color-navy: 222 58% 25%;
+
+    /* Glass surface for overlays */
+    --glass-bg: rgba(15, 15, 22, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Keep consistent dark mode */
+  .dark {
+    --background: 240 15% 4%;
+    --foreground: 0 0% 95%;
+    --card: 240 12% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 12% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 43 90% 52%;
+    --primary-foreground: 240 20% 6%;
+    --secondary: 240 10% 14%;
+    --secondary-foreground: 0 0% 80%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 240 10% 18%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 65% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 8% 16%;
+    --input: 240 8% 14%;
+    --ring: 43 90% 52%;
   }
 }
 
 @layer base {
   :root {
-    --font-sans: 'Inter', 'DM Sans', system-ui, sans-serif;
-    --font-serif: 'Georgia', serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
+    --font-display: 'Space Grotesk', -apple-system, 'Helvetica Neue', sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', monospace;
   }
 
   * {
     @apply border-border;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
+    /* iOS rubber-band scroll only at document level */
+    overscroll-behavior: none;
   }
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    font-family: var(--font-sans);
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.5;
     min-height: 100dvh;
+    /* iOS safe area */
+    padding-top: env(safe-area-inset-top);
+    overscroll-behavior: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    line-height: 1.25;
+    font-family: var(--font-display);
+    line-height: 1.2;
     text-wrap: balance;
   }
 }
 
-/* Card gradient backgrounds for credit cards */
-.card-gradient-navy    { background: linear-gradient(135deg, #1a2f5a 0%, #0f1e3d 100%); }
-.card-gradient-purple  { background: linear-gradient(135deg, #5b21b6 0%, #3730a3 100%); }
-.card-gradient-gold    { background: linear-gradient(135deg, #b45309 0%, #92400e 100%); }
-.card-gradient-teal    { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); }
-.card-gradient-slate   { background: linear-gradient(135deg, #475569 0%, #334155 100%); }
-.card-gradient-emerald { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
+/* ── Safe area utilities ──────────────────────────────────────────── */
+.safe-top    { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.pb-safe     { padding-bottom: calc(env(safe-area-inset-bottom) + 4.5rem); }
 
-/* Utilization ring colors */
-.util-good    { color: hsl(160 60% 38%); }
-.util-caution { color: hsl(38 92% 50%); }
-.util-danger  { color: hsl(0 72% 51%); }
+/* ── Bottom tab bar ──────────────────────────────────────────────── */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  background: rgba(10, 10, 18, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(4rem + env(safe-area-inset-bottom));
+}
 
-/* Smooth transitions */
-* {
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 0 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: hsl(240 5% 50%);
+  cursor: pointer;
+  transition: color 180ms ease, transform 120ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+  border: none;
+  background: none;
+}
+
+.tab-bar-item:active {
+  transform: scale(0.92);
+}
+
+.tab-bar-item.active {
+  color: hsl(var(--primary));
+}
+
+.tab-bar-item .tab-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Credit card display ─────────────────────────────────────────── */
+.credit-card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 1.586 / 1;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.credit-card:active {
+  transform: scale(0.97);
+}
+
+/* ── Card fan stack (Apple Wallet) ───────────────────────────────── */
+.card-fan {
+  position: relative;
+  width: 100%;
+}
+
+.card-fan-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transition: transform 400ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 300ms ease;
+  transform-origin: top center;
+  will-change: transform;
+}
+
+/* ── Glassmorphism card panels ───────────────────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+}
+
+.glass-panel-elevated {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ── iOS-style list rows ─────────────────────────────────────────── */
+.ios-list {
+  background: hsl(var(--card));
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ios-list-row {
+  display: flex;
+  align-items: center;
+  padding: 13px 16px;
+  border-bottom: 1px solid hsl(var(--border));
+  gap: 12px;
+  transition: background 120ms ease;
+}
+
+.ios-list-row:last-child {
+  border-bottom: none;
+}
+
+.ios-list-row:active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Score ring ──────────────────────────────────────────────────── */
+.score-ring-track {
+  stroke: hsl(240 8% 18%);
+  fill: none;
+}
+.score-ring-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Card gradient backgrounds ────────────────────────────────────── */
+.card-gradient-navy    { background: linear-gradient(135deg, #1e3a6e 0%, #0f1e3d 60%, #0a1428 100%); }
+.card-gradient-purple  { background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 60%, #2d1167 100%); }
+.card-gradient-gold    { background: linear-gradient(135deg, #c9a227 0%, #a07810 60%, #7a5a08 100%); }
+.card-gradient-teal    { background: linear-gradient(135deg, #0d9488 0%, #0f766e 60%, #065f55 100%); }
+.card-gradient-slate   { background: linear-gradient(135deg, #475569 0%, #334155 60%, #1e293b 100%); }
+.card-gradient-emerald { background: linear-gradient(135deg, #059669 0%, #047857 60%, #035740 100%); }
+.card-gradient-rose    { background: linear-gradient(135deg, #be123c 0%, #9f1239 60%, #7f0f30 100%); }
+.card-gradient-indigo  { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 60%, #25248a 100%); }
+
+/* ── Util colors ──────────────────────────────────────────────────── */
+.util-good    { color: hsl(160 55% 45%); }
+.util-caution { color: hsl(38 92% 55%); }
+.util-danger  { color: hsl(0 72% 55%); }
+
+/* ── Scrollbar (minimal) ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Smooth transitions ──────────────────────────────────────────── */
+*, *::before, *::after {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 9999px; }
+/* ── Page container with bottom tab padding ──────────────────────── */
+.page-content {
+  min-height: 100dvh;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+}
+
+/* ── Section label (iOS style caps) ─────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(240 5% 50%);
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
+
+/* ── Animated number counter ─────────────────────────────────────── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-count { animation: countUp 0.4s ease; }
+
+/* ── Shimmer skeleton ────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, hsl(240 10% 12%) 25%, hsl(240 10% 16%) 50%, hsl(240 10% 12%) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Pull indicator / divider lines ─────────────────────────────── */
+.divider-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+}
