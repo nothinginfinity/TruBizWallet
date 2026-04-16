@@ -1,11 +1,13 @@
 import { db } from "./db";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import {
-  cards, activity, reminders, scoreSnapshots,
+  cards, activity, reminders, scoreSnapshots, clients, reimbursements,
   type Card, type InsertCard,
   type Activity, type InsertActivity,
   type Reminder, type InsertReminder,
   type ScoreSnapshot, type InsertScoreSnapshot,
+  type Client, type InsertClient,
+  type Reimbursement, type InsertReimbursement,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -18,7 +20,9 @@ export interface IStorage {
 
   // Activity
   getActivity(cardId?: number, limit?: number): Activity[];
+  getReimbursableActivity(): Activity[];
   createActivity(entry: InsertActivity): Activity;
+  updateActivity(id: number, updates: Partial<InsertActivity>): Activity | undefined;
   deleteActivity(id: number): void;
 
   // Reminders
@@ -32,6 +36,19 @@ export interface IStorage {
   // Score snapshots
   getScoreSnapshots(limit?: number): ScoreSnapshot[];
   upsertScoreSnapshot(snapshot: InsertScoreSnapshot): ScoreSnapshot;
+
+  // Clients
+  getClients(): Client[];
+  getClient(id: number): Client | undefined;
+  createClient(client: InsertClient): Client;
+  updateClient(id: number, updates: Partial<InsertClient>): Client | undefined;
+  deleteClient(id: number): void;
+
+  // Reimbursements
+  getReimbursements(status?: string): Reimbursement[];
+  getReimbursement(id: number): Reimbursement | undefined;
+  createReimbursement(r: InsertReimbursement): Reimbursement;
+  updateReimbursement(id: number, updates: Partial<InsertReimbursement>): Reimbursement | undefined;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -55,7 +72,6 @@ export class DatabaseStorage implements IStorage {
 
   // ── Activity ───────────────────────────────────────────────────
   getActivity(cardId?: number, limit = 50): Activity[] {
-    let query = db.select().from(activity).orderBy(desc(activity.date));
     if (cardId !== undefined) {
       return db.select().from(activity)
         .where(eq(activity.cardId, cardId))
@@ -63,11 +79,16 @@ export class DatabaseStorage implements IStorage {
         .limit(limit)
         .all();
     }
-    return query.limit(limit).all();
+    return db.select().from(activity).orderBy(desc(activity.date)).limit(limit).all();
+  }
+  getReimbursableActivity(): Activity[] {
+    return db.select().from(activity)
+      .where(eq(activity.reimbursable, true))
+      .orderBy(desc(activity.date))
+      .all();
   }
   createActivity(entry: InsertActivity): Activity {
     const result = db.insert(activity).values(entry).returning().get();
-    // Update card balance
     const card = this.getCard(entry.cardId);
     if (card) {
       const delta = entry.type === "payment" ? -entry.amount : entry.amount;
@@ -75,6 +96,10 @@ export class DatabaseStorage implements IStorage {
       this.updateCard(entry.cardId, { currentBalance: newBalance });
     }
     return result;
+  }
+  updateActivity(id: number, updates: Partial<InsertActivity>): Activity | undefined {
+    db.update(activity).set(updates).where(eq(activity.id, id)).run();
+    return db.select().from(activity).where(eq(activity.id, id)).get();
   }
   deleteActivity(id: number): void {
     db.delete(activity).where(eq(activity.id, id)).run();
@@ -91,10 +116,6 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(reminders).orderBy(reminders.dueDay).all();
   }
   getUpcomingReminders(days = 7): Reminder[] {
-    const today = new Date();
-    const cutoff = new Date();
-    cutoff.setDate(today.getDate() + days);
-    // For day-of-month reminders, surface those due in the next N days
     return db.select().from(reminders)
       .where(eq(reminders.completed, false))
       .orderBy(reminders.dueDay)
@@ -137,6 +158,47 @@ export class DatabaseStorage implements IStorage {
         .where(eq(scoreSnapshots.date, snapshot.date)).get()!;
     }
     return db.insert(scoreSnapshots).values(snapshot).returning().get();
+  }
+
+  // ── Clients ────────────────────────────────────────────────────
+  getClients(): Client[] {
+    return db.select().from(clients).orderBy(clients.name).all();
+  }
+  getClient(id: number): Client | undefined {
+    return db.select().from(clients).where(eq(clients.id, id)).get();
+  }
+  createClient(client: InsertClient): Client {
+    return db.insert(clients).values(client).returning().get();
+  }
+  updateClient(id: number, updates: Partial<InsertClient>): Client | undefined {
+    db.update(clients).set(updates).where(eq(clients.id, id)).run();
+    return this.getClient(id);
+  }
+  deleteClient(id: number): void {
+    db.delete(clients).where(eq(clients.id, id)).run();
+  }
+
+  // ── Reimbursements ─────────────────────────────────────────────
+  getReimbursements(status?: string): Reimbursement[] {
+    if (status) {
+      return db.select().from(reimbursements)
+        .where(eq(reimbursements.status, status))
+        .orderBy(desc(reimbursements.createdAt))
+        .all();
+    }
+    return db.select().from(reimbursements)
+      .orderBy(desc(reimbursements.createdAt))
+      .all();
+  }
+  getReimbursement(id: number): Reimbursement | undefined {
+    return db.select().from(reimbursements).where(eq(reimbursements.id, id)).get();
+  }
+  createReimbursement(r: InsertReimbursement): Reimbursement {
+    return db.insert(reimbursements).values(r).returning().get();
+  }
+  updateReimbursement(id: number, updates: Partial<InsertReimbursement>): Reimbursement | undefined {
+    db.update(reimbursements).set(updates).where(eq(reimbursements.id, id)).run();
+    return this.getReimbursement(id);
   }
 }
 
