@@ -3,8 +3,19 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Bell, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
-import type { Card as CardType, Reminder, ScoreSnapshot } from "@shared/schema";
+import type { Card as CardType, Reminder, ScoreSnapshot, Client } from "@shared/schema";
 import { format } from "date-fns";
+
+type Reimbursement = {
+  id: number;
+  clientId: number;
+  amount: number;
+  method: string;
+  status: string;
+  sentAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+};
 
 function utilizationColor(pct: number, goal: number) {
   if (pct <= goal) return "#34d399";
@@ -23,9 +34,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative" style={{ width: 140, height: 140 }}>
       <svg width="140" height="140" viewBox="0 0 140 140">
-        {/* Track */}
         <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10" />
-        {/* Fill */}
         <circle
           cx="70" cy="70" r={R}
           fill="none"
@@ -43,6 +52,113 @@ function ScoreRing({ score }: { score: number }) {
           {Math.round(score)}
         </span>
         <span className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">/ 100</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Reimbursements widget ───────────────────────────────────────────────────
+function ReimbursementsWidget() {
+  const { data: reimbursements = [] } = useQuery<Reimbursement[]>({
+    queryKey: ["/api/reimbursements"],
+    queryFn: () => apiRequest("GET", "/api/reimbursements").then(r => r.json()),
+  });
+
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
+    queryFn: () => apiRequest("GET", "/api/clients").then(r => r.json()),
+  });
+
+  const active = reimbursements.filter(r => r.status === "draft" || r.status === "sent");
+  const drafts = active.filter(r => r.status === "draft");
+  const sent = active.filter(r => r.status === "sent");
+  const outstanding = active.reduce((s, r) => s + r.amount, 0);
+
+  // Only show widget if there's something to act on
+  if (active.length === 0) return null;
+
+  // Show up to 3 most recent active rows
+  const preview = active.slice(0, 3);
+
+  function clientName(clientId: number) {
+    return clients.find(c => c.id === clientId)?.name ?? `Client #${clientId}`;
+  }
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="section-label">Reimbursements</p>
+        <Link href="/reimbursements">
+          <button className="flex items-center gap-0.5 text-[11px] text-primary">
+            See all <ChevronRight className="w-3 h-3" />
+          </button>
+        </Link>
+      </div>
+
+      <div className="glass-panel border border-amber-500/15 bg-amber-500/5 overflow-hidden">
+        {/* Summary bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <div className="flex gap-4">
+            {drafts.length > 0 && (
+              <div className="text-center">
+                <p className="text-[10px] text-white/40 uppercase tracking-widest">Draft</p>
+                <p className="text-base font-bold text-white/70">{drafts.length}</p>
+              </div>
+            )}
+            {sent.length > 0 && (
+              <div className="text-center">
+                <p className="text-[10px] text-white/40 uppercase tracking-widest">Awaiting</p>
+                <p className="text-base font-bold text-amber-400">{sent.length}</p>
+              </div>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding</p>
+            <p className="text-lg font-bold text-amber-400">${outstanding.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Preview rows */}
+        {preview.map((r, i) => (
+          <Link href="/reimbursements" key={r.id}>
+            <div
+              className={`flex items-center gap-3 px-4 py-3 ${
+                i < preview.length - 1 ? "border-b border-white/5" : ""
+              } active:bg-white/5`}
+            >
+              {/* Status dot */}
+              <div
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  r.status === "sent" ? "bg-amber-400" : "bg-white/25"
+                }`}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{clientName(r.clientId)}</p>
+                <p className="text-xs text-white/35 capitalize">
+                  {r.status === "sent" ? "⏳ Awaiting payment" : "✏️ Draft — send request"}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold">${r.amount.toFixed(2)}</p>
+                <p className="text-[10px] text-white/30 capitalize">{r.method}</p>
+              </div>
+            </div>
+          </Link>
+        ))}
+
+        {/* CTA if any drafts */}
+        {drafts.length > 0 && (
+          <Link href="/reimbursements">
+            <div className="px-4 py-2.5 border-t border-white/5 flex items-center justify-center gap-1.5">
+              <span className="text-xs font-semibold text-amber-400">
+                {drafts.length === 1
+                  ? "1 draft ready to send"
+                  : `${drafts.length} drafts ready to send`}
+              </span>
+              <ChevronRight className="w-3 h-3 text-amber-400" />
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -71,6 +187,8 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reimbursements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
     },
   });
 
@@ -113,7 +231,6 @@ export default function Dashboard() {
   if (!cards.length) {
     return (
       <div className="page-content flex flex-col items-center justify-center px-6 text-center gap-5" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-        {/* Logo */}
         <div className="mt-16 mb-2">
           <div className="w-20 h-20 rounded-[22px] flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, #c9a227, #a07810)" }}>
             <svg viewBox="0 0 40 28" className="w-10 h-7" fill="none">
@@ -211,6 +328,9 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ★ Reimbursements widget — only renders when there are active items */}
+      <ReimbursementsWidget />
+
       {/* Card utilization */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -228,7 +348,6 @@ export default function Dashboard() {
             const uColor = utilizationColor(util, card.usageGoalPct);
             return (
               <div key={card.id} className="ios-list-row" data-testid={`card-utilization-${card.id}`}>
-                {/* Color dot */}
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
                   style={{ background: `linear-gradient(135deg, ${card.color}, ${card.color}99)` }}>
                   {card.issuer.slice(0,2).toUpperCase()}

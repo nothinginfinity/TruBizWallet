@@ -1,7 +1,13 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
-import { insertCardSchema, insertActivitySchema, insertReminderSchema } from "@shared/schema";
+import {
+  insertCardSchema,
+  insertActivitySchema,
+  insertReminderSchema,
+  insertClientSchema,
+  insertReimbursementSchema,
+} from "@shared/schema";
 import { z } from "zod";
 
 // ── Score computation helper ─────────────────────────────────────
@@ -13,10 +19,8 @@ function computeAndSaveScore() {
   const totalBalance = allCards.reduce((s, c) => s + c.currentBalance, 0);
   const avgUtilization = totalCredit > 0 ? (totalBalance / totalCredit) * 100 : 0;
 
-  // Utilization score: best at <10%, degrades linearly above
   const utilScore = Math.max(0, 100 - Math.max(0, avgUtilization - 5) * 3);
 
-  // Goal adherence: cards within their usage goal
   const onGoal = allCards.filter(c => {
     const util = c.creditLimit > 0 ? (c.currentBalance / c.creditLimit) * 100 : 0;
     return util <= c.usageGoalPct;
@@ -76,6 +80,10 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json(storage.getActivity(cardId));
   });
 
+  app.get("/api/activity/reimbursable", (_req, res) => {
+    res.json(storage.getReimbursableActivity());
+  });
+
   app.post("/api/activity", (req, res) => {
     const parsed = insertActivitySchema.safeParse({
       ...req.body,
@@ -83,7 +91,26 @@ export async function registerRoutes(server: Server, app: Express) {
     });
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const entry = storage.createActivity(parsed.data);
+    // Auto-create a draft reimbursement if flagged
+    if (parsed.data.reimbursable && parsed.data.clientId) {
+      storage.createReimbursement({
+        activityId: entry.id,
+        clientId: parsed.data.clientId,
+        amount: parsed.data.reimbursementAmount ?? parsed.data.amount,
+        method: "zelle",
+        status: "draft",
+        createdAt: new Date().toISOString(),
+      });
+    }
     computeAndSaveScore();
+    res.json(entry);
+  });
+
+  app.patch("/api/activity/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const entry = storage.updateActivity(id, req.body);
+    if (!entry) return res.status(404).json({ error: "Activity not found" });
     res.json(entry);
   });
 
@@ -141,81 +168,112 @@ export async function registerRoutes(server: Server, app: Express) {
     res.json(storage.getScoreSnapshots(30));
   });
 
-  // ── Seed demo data (dev helper) ─────────────────────────────────
+  // ── Clients ────────────────────────────────────────────────────
+  app.get("/api/clients", (_req, res) => {
+    res.json(storage.getClients());
+  });
+
+  app.get("/api/clients/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const client = storage.getClient(id);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    // Include this client's reimbursable activity
+    const clientActivity = storage.getReimbursableActivity()
+      .filter(a => a.clientId === id);
+    res.json({ ...client, activity: clientActivity });
+  });
+
+  app.post("/api/clients", (req, res) => {
+    const parsed = insertClientSchema.safeParse({
+      ...req.body,
+      createdAt: new Date().toISOString(),
+    });
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    res.json(storage.createClient(parsed.data));
+  });
+
+  app.patch("/api/clients/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const client = storage.updateClient(id, req.body);
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json(client);
+  });
+
+  app.delete("/api/clients/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    storage.deleteClient(id);
+    res.json({ ok: true });
+  });
+
+  // ── Reimbursements ─────────────────────────────────────────────
+  app.get("/api/reimbursements", (req, res) => {
+    const status = req.query.status as string | undefined;
+    res.json(storage.getReimbursements(status));
+  });
+
+  app.post("/api/reimbursements", (req, res) => {
+    const parsed = insertReimbursementSchema.safeParse({
+      ...req.body,
+      createdAt: new Date().toISOString(),
+    });
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    res.json(storage.createReimbursement(parsed.data));
+  });
+
+  app.patch("/api/reimbursements/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const now = new Date().toISOString();
+    const updates: Record<string, unknown> = { ...req.body };
+    // Auto-stamp timestamps on status transitions
+    if (req.body.status === "sent" && !req.body.sentAt) updates.sentAt = now;
+    if (req.body.status === "paid" && !req.body.paidAt) updates.paidAt = now;
+    const r = storage.updateReimbursement(id, updates);
+    if (!r) return res.status(404).json({ error: "Reimbursement not found" });
+    // Sync back to activity if paid
+    if (req.body.status === "paid") {
+      storage.updateActivity(r.activityId, {
+        reimbursementStatus: "received",
+        reimbursementReceivedAt: now,
+      });
+    }
+    res.json(r);
+  });
+
+  // ── Seed demo data (dev helper) ────────────────────────────────
   app.post("/api/seed", (_req, res) => {
     const now = new Date().toISOString();
     const today = new Date().toISOString().split("T")[0];
 
-    // Only seed if no cards exist
     if (storage.getCards().length > 0) {
       return res.json({ message: "Already seeded" });
     }
 
-    const card1 = storage.createCard({
-      name: "Chase Ink Business Cash",
-      issuer: "Chase",
-      last4: "4821",
-      cardType: "visa",
-      color: "#1a3a5c",
-      creditLimit: 5000,
-      currentBalance: 380,
-      statementBalance: 380,
-      usageGoalPct: 10,
-      dueDay: 15,
-      reportingDay: 10,
-      layer: 3,
-      notes: "Primary vendor purchases",
-      createdAt: now,
-    });
+    const card1 = storage.createCard({ name: "Chase Ink Business Cash", issuer: "Chase", last4: "4821", cardType: "visa", color: "#1a3a5c", creditLimit: 5000, currentBalance: 380, statementBalance: 380, usageGoalPct: 10, dueDay: 15, reportingDay: 10, layer: 3, notes: "Primary vendor purchases", createdAt: now });
+    const card2 = storage.createCard({ name: "Brex Business Card", issuer: "Brex", last4: "9312", cardType: "mastercard", color: "#7c3aed", creditLimit: 10000, currentBalance: 720, statementBalance: 720, usageGoalPct: 10, dueDay: 20, reportingDay: 15, layer: 4, notes: "Software subscriptions only", createdAt: now });
+    const card3 = storage.createCard({ name: "Capital One Spark", issuer: "Capital One", last4: "0077", cardType: "mastercard", color: "#b45309", creditLimit: 8000, currentBalance: 200, statementBalance: 200, usageGoalPct: 10, dueDay: 25, reportingDay: 20, layer: 5, notes: "Travel & entertainment", createdAt: now });
 
-    const card2 = storage.createCard({
-      name: "Brex Business Card",
-      issuer: "Brex",
-      last4: "9312",
-      cardType: "mastercard",
-      color: "#7c3aed",
-      creditLimit: 10000,
-      currentBalance: 720,
-      statementBalance: 720,
-      usageGoalPct: 10,
-      dueDay: 20,
-      reportingDay: 15,
-      layer: 4,
-      notes: "Software subscriptions only",
-      createdAt: now,
-    });
+    // Seed a demo client
+    const client1 = storage.createClient({ name: "Alex Rivera", phone: "949-555-0101", email: "alex@example.com", zelleHandle: "alex@example.com", preferredPayment: "zelle", notes: "Personal training client", createdAt: now });
 
-    const card3 = storage.createCard({
-      name: "Capital One Spark",
-      issuer: "Capital One",
-      last4: "0077",
-      cardType: "mastercard",
-      color: "#b45309",
-      creditLimit: 8000,
-      currentBalance: 200,
-      statementBalance: 200,
-      usageGoalPct: 10,
-      dueDay: 25,
-      reportingDay: 20,
-      layer: 5,
-      notes: "Travel & entertainment",
-      createdAt: now,
-    });
-
-    // Sample activity
     storage.createActivity({ cardId: card1.id, type: "spend", amount: 180, merchant: "Staples", note: "Office supplies", date: today, createdAt: now });
     storage.createActivity({ cardId: card1.id, type: "spend", amount: 200, merchant: "Amazon Business", note: "Supplies", date: today, createdAt: now });
     storage.createActivity({ cardId: card2.id, type: "spend", amount: 720, merchant: "AWS", note: "Monthly cloud bill", date: today, createdAt: now });
     storage.createActivity({ cardId: card3.id, type: "spend", amount: 200, merchant: "Delta Airlines", note: "Business travel", date: today, createdAt: now });
 
-    // Sample reminders
+    // Seed a reimbursable spend for demo client
+    const reimburseEntry = storage.createActivity({ cardId: card3.id, type: "spend", amount: 85, merchant: "True Foods Kitchen", note: "Client lunch", date: today, createdAt: now, clientId: client1.id, reimbursable: true, reimbursementStatus: "pending", merchantCategory: "restaurant", locationName: "True Foods Kitchen, Dana Point" });
+    storage.createReimbursement({ activityId: reimburseEntry.id, clientId: client1.id, amount: 85, method: "zelle", status: "sent", sentAt: now, createdAt: now });
+
     storage.createReminder({ cardId: card1.id, type: "payment", title: "Pay Chase Ink balance", dueDay: 15, amount: 380, recurring: true, completed: false, createdAt: now });
     storage.createReminder({ cardId: card2.id, type: "payment", title: "Pay Brex balance", dueDay: 20, amount: 720, recurring: true, completed: false, createdAt: now });
     storage.createReminder({ cardId: card3.id, type: "spend", title: "Use Spark for travel booking", dueDay: null, amount: 50, recurring: true, completed: false, createdAt: now });
     storage.createReminder({ cardId: null, type: "custom", title: "Review NAV credit report", dueDay: 1, amount: null, recurring: true, completed: false, createdAt: now });
 
     computeAndSaveScore();
-
-    res.json({ message: "Seeded", cards: 3 });
+    res.json({ message: "Seeded", cards: 3, clients: 1 });
   });
 }
