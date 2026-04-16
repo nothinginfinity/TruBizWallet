@@ -3,14 +3,16 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Dashboard from "@/pages/Dashboard";
 import Wallet from "@/pages/Wallet";
 import Reminders from "@/pages/Reminders";
 import Scoreboard from "@/pages/Scoreboard";
+import Spend from "@/pages/Spend";
+import Clients from "@/pages/Clients";
+import Reimbursements from "@/pages/Reimbursements";
 import NotFound from "@/pages/not-found";
 
-// Tab bar icons — inline SVGs for crispness
 function IconDashboard({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -21,7 +23,6 @@ function IconDashboard({ active }: { active: boolean }) {
     </svg>
   );
 }
-
 function IconWallet({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -31,7 +32,6 @@ function IconWallet({ active }: { active: boolean }) {
     </svg>
   );
 }
-
 function IconBell({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +40,6 @@ function IconBell({ active }: { active: boolean }) {
     </svg>
   );
 }
-
 function IconScore({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -50,22 +49,50 @@ function IconScore({ active }: { active: boolean }) {
     </svg>
   );
 }
+function IconSpend({ active }: { active: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" fill={active ? "currentColor" : "none"} fillOpacity={0.1}/>
+      <path d="M12 7v5l3 3"/>
+      <path d="M12 3v1M12 20v1M3 12h1M20 12h1"/>
+    </svg>
+  );
+}
+function IconPeople({ active }: { active: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3" fill={active ? "currentColor" : "none"} fillOpacity={0.15}/>
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      <circle cx="18" cy="8" r="2.5"/>
+      <path d="M21 20c0-2.8-1.8-5-4-5.5"/>
+    </svg>
+  );
+}
+function IconReimburse({ active }: { active: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill={active ? "currentColor" : "none"} fillOpacity={0.1}/>
+    </svg>
+  );
+}
 
 const TABS = [
-  { href: "/",           label: "Home",      Icon: IconDashboard },
-  { href: "/wallet",     label: "Wallet",    Icon: IconWallet },
-  { href: "/reminders",  label: "Reminders", Icon: IconBell },
-  { href: "/scoreboard", label: "Score",     Icon: IconScore },
+  { href: "/",               label: "Home",    Icon: IconDashboard },
+  { href: "/wallet",         label: "Wallet",  Icon: IconWallet },
+  { href: "/spend",          label: "Spend",   Icon: IconSpend },
+  { href: "/clients",        label: "Clients", Icon: IconPeople },
+  { href: "/reimbursements", label: "Reimburse",Icon: IconReimburse },
+  { href: "/reminders",      label: "Reminders",Icon: IconBell },
+  { href: "/scoreboard",     label: "Score",   Icon: IconScore },
 ];
 
 function BottomTabBar() {
   const [location] = useLocation();
-
   return (
     <nav className="tab-bar" role="tablist">
       {TABS.map(({ href, label, Icon }) => {
-        const active = href === "/" 
-          ? location === "/" || location === "" 
+        const active = href === "/"
+          ? location === "/" || location === ""
           : location === href || location.startsWith(href + "/");
         return (
           <a
@@ -74,11 +101,8 @@ function BottomTabBar() {
             className={`tab-bar-item${active ? " active" : ""}`}
             role="tab"
             aria-selected={active}
-            data-testid={`tab-${label.toLowerCase()}`}
           >
-            <span className="tab-icon">
-              <Icon active={active} />
-            </span>
+            <span className="tab-icon"><Icon active={active} /></span>
             {label}
           </a>
         );
@@ -88,16 +112,15 @@ function BottomTabBar() {
 }
 
 function AppLayout() {
-  // Force dark mode always — Apple Wallet is dark
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
+  useEffect(() => { document.documentElement.classList.add("dark"); }, []);
   return (
     <div className="min-h-dvh bg-background">
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/wallet" component={Wallet} />
+        <Route path="/spend" component={Spend} />
+        <Route path="/clients" component={Clients} />
+        <Route path="/reimbursements" component={Reimbursements} />
         <Route path="/reminders" component={Reminders} />
         <Route path="/scoreboard" component={Scoreboard} />
         <Route component={NotFound} />
