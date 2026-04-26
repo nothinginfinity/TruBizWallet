@@ -70,6 +70,9 @@ export const scoreSnapshots = sqliteTable("score_snapshots", {
   totalCards: integer("total_cards").notNull().default(0),
   totalCredit: real("total_credit").notNull().default(0),
   totalBalance: real("total_balance").notNull().default(0),
+  sbss: real("sbss"),                      // Small Business Scoring Service — range 0–300
+  paydex: real("paydex"),                  // Dun & Bradstreet Paydex — range 0–100
+  intelliscore: real("intelliscore"),      // Experian Intelliscore Plus — range 1–100
 });
 
 export const insertScoreSnapshotSchema = createInsertSchema(scoreSnapshots).omit({ id: true });

@@ -191,6 +191,78 @@ export default function Scoreboard() {
         </div>
       </div>
 
+      {/* Bureau Scores — SBSS, Paydex, Intelliscore */}
+      {latestScore && (latestScore.sbss !== null || latestScore.paydex !== null || latestScore.intelliscore !== null) && (
+        <div className="mb-5">
+          <p className="section-label mb-3">Bureau Scores</p>
+          <div className="space-y-2">
+            {latestScore.sbss !== null && (() => {
+              const v = latestScore.sbss!;
+              const tier = v >= 200 ? { label: "Excellent", color: "#34d399" } : v >= 160 ? { label: "Good", color: "#38bdf8" } : v >= 120 ? { label: "Fair", color: "#fbbf24" } : { label: "Needs Work", color: "#f87171" };
+              return (
+                <div className="glass-panel p-4" data-testid="bureau-sbss">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold">SBSS</p>
+                      <p className="text-[10px] text-white/30">Nav / FICO — Range 0–300</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold" style={{ color: tier.color }}>{v}</p>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: tier.color, background: `${tier.color}20` }}>{tier.label}</span>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/8">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((v / 300) * 100, 100)}%`, background: tier.color }} />
+                  </div>
+                </div>
+              );
+            })()}
+            {latestScore.paydex !== null && (() => {
+              const v = latestScore.paydex!;
+              const tier = v >= 80 ? { label: "Excellent", color: "#34d399" } : v >= 70 ? { label: "Good", color: "#38bdf8" } : v >= 50 ? { label: "Fair", color: "#fbbf24" } : { label: "Needs Work", color: "#f87171" };
+              return (
+                <div className="glass-panel p-4" data-testid="bureau-paydex">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold">Paydex</p>
+                      <p className="text-[10px] text-white/30">Dun & Bradstreet — Range 0–100</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold" style={{ color: tier.color }}>{v}</p>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: tier.color, background: `${tier.color}20` }}>{tier.label}</span>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/8">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(v, 100)}%`, background: tier.color }} />
+                  </div>
+                </div>
+              );
+            })()}
+            {latestScore.intelliscore !== null && (() => {
+              const v = latestScore.intelliscore!;
+              const tier = v >= 76 ? { label: "Low Risk", color: "#34d399" } : v >= 51 ? { label: "Medium", color: "#38bdf8" } : v >= 26 ? { label: "High Risk", color: "#fbbf24" } : { label: "Very High", color: "#f87171" };
+              return (
+                <div className="glass-panel p-4" data-testid="bureau-intelliscore">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold">Intelliscore Plus</p>
+                      <p className="text-[10px] text-white/30">Experian — Range 1–100</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold" style={{ color: tier.color }}>{v}</p>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: tier.color, background: `${tier.color}20` }}>{tier.label}</span>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/8">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(v, 100)}%`, background: tier.color }} />
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Score history chart */}
       {chartData.length > 1 && (
         <div className="mb-5">

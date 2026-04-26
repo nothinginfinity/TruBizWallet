@@ -3,24 +3,24 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertCardSchema, type Card, type InsertCard, type Activity } from "@shared/schema";
+import { insertCardSchema, type Card, type InsertCard, type Activity, type ScoreSnapshot } from "@shared/schema";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Trash2, ChevronDown, ChevronUp, ArrowDownCircle, ArrowUpCircle, X } from "lucide-react";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, X } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import CreditCardFace from "@/components/CreditCardFace";
 
 const CARD_COLORS = [
-  { label: "Navy",    value: "#1e3a6e" },
-  { label: "Purple",  value: "#6d28d9" },
-  { label: "Gold",    value: "#c9a227" },
-  { label: "Teal",    value: "#0d9488" },
-  { label: "Slate",   value: "#475569" },
+  { label: "Navy",    value: "#1a1a2e" },
+  { label: "Dark Blue", value: "#16213e" },
+  { label: "Blue",    value: "#0f3460" },
+  { label: "Purple",  value: "#533483" },
+  { label: "Slate",   value: "#1b1b2f" },
   { label: "Emerald", value: "#059669" },
   { label: "Rose",    value: "#be123c" },
   { label: "Indigo",  value: "#4f46e5" },
@@ -38,91 +38,45 @@ const formSchema = insertCardSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
-function utilColor(util: number, goal: number) {
-  if (util <= goal) return "#34d399";
-  if (util <= goal * 1.5) return "#fbbf24";
-  return "#f87171";
+// Score tier helpers
+function sbssTier(v: number): { label: string; color: string } {
+  if (v >= 200) return { label: "Excellent", color: "#34d399" };
+  if (v >= 160) return { label: "Good", color: "#38bdf8" };
+  if (v >= 120) return { label: "Fair", color: "#fbbf24" };
+  return { label: "Needs Work", color: "#f87171" };
 }
 
-// Full-size credit card visual (Apple Wallet style)
-function CreditCardFace({ card, onClick }: { card: Card; onClick?: () => void }) {
-  const util = card.creditLimit > 0 ? (card.currentBalance / card.creditLimit) * 100 : 0;
-  const pct = Math.min(util, 100);
-  // Derive a second gradient color (darken)
-  const baseColor = card.color;
+function paydexTier(v: number): { label: string; color: string } {
+  if (v >= 80) return { label: "Excellent", color: "#34d399" };
+  if (v >= 70) return { label: "Good", color: "#38bdf8" };
+  if (v >= 50) return { label: "Fair", color: "#fbbf24" };
+  return { label: "Needs Work", color: "#f87171" };
+}
 
+function intelliscoreTier(v: number): { label: string; color: string } {
+  if (v >= 76) return { label: "Low Risk", color: "#34d399" };
+  if (v >= 51) return { label: "Medium", color: "#38bdf8" };
+  if (v >= 26) return { label: "High Risk", color: "#fbbf24" };
+  return { label: "Very High", color: "#f87171" };
+}
+
+function ScoreTile({ label, value, maxVal, tier }: { label: string; value: number | null; maxVal: number; tier: { label: string; color: string } }) {
+  if (value === null) return null;
+  const pct = Math.min((value / maxVal) * 100, 100);
   return (
-    <div
-      className="credit-card"
-      style={{ background: `linear-gradient(135deg, ${baseColor} 0%, ${baseColor}cc 50%, ${baseColor}99 100%)` }}
-      onClick={onClick}
-      data-testid={`card-face-${card.id}`}
-    >
-      {/* Shine overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-transparent pointer-events-none" />
-      {/* Gloss bar */}
-      <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/10 to-transparent rounded-t-[18px] pointer-events-none" />
-
-      {/* Content */}
-      <div className="absolute inset-0 flex flex-col justify-between p-5 text-white">
-        {/* Top row */}
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-medium opacity-60 tracking-widest uppercase">Layer {card.layer}</p>
-            <p className="text-sm font-semibold mt-0.5 leading-tight max-w-[180px]">{card.name}</p>
-          </div>
-          {/* Mastercard-style circles */}
-          <svg viewBox="0 0 40 28" className="w-11 h-8 opacity-80" fill="none">
-            <circle cx="14" cy="14" r="11" fill="rgba(255,255,255,0.35)"/>
-            <circle cx="26" cy="14" r="11" fill="rgba(255,255,255,0.55)"/>
-          </svg>
-        </div>
-
-        {/* Chip */}
+    <div className="flex-1 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <p className="text-2xl font-bold" style={{ color: tier.color, fontFamily: "var(--font-display)" }}>{value}</p>
+      <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">{label}</p>
+      <div className="mt-3 h-1.5 rounded-full bg-white/8 overflow-hidden">
         <div
-          className="w-10 h-8 rounded-[5px] flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0.4))" }}
-        >
-          <div className="grid grid-cols-2 gap-[2px]">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="w-[7px] h-[7px] rounded-[1px]" style={{ background: "rgba(0,0,0,0.15)" }} />
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom */}
-        <div>
-          <p className="font-mono text-sm tracking-[0.25em] opacity-80">•••• •••• •••• {card.last4}</p>
-          <div className="flex justify-between items-end mt-2">
-            <div>
-              <p className="text-[9px] opacity-50 uppercase tracking-widest">Balance</p>
-              <p className="text-lg font-bold leading-none">${card.currentBalance.toLocaleString()}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] opacity-50 uppercase tracking-widest">Limit</p>
-              <p className="text-sm font-semibold opacity-80">${card.creditLimit.toLocaleString()}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] opacity-50 uppercase tracking-widest">Due day</p>
-              <p className="text-sm font-semibold opacity-80">{card.dueDay}</p>
-            </div>
-          </div>
-
-          {/* Util bar */}
-          <div className="mt-3 relative">
-            <div className="h-[3px] rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${pct}%`, background: utilColor(util, card.usageGoalPct) }}
-              />
-            </div>
-            <div className="flex justify-between mt-1">
-              <span className="text-[9px] opacity-50">{util.toFixed(1)}% used</span>
-              <span className="text-[9px] opacity-50">Goal: {card.usageGoalPct}%</span>
-            </div>
-          </div>
-        </div>
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: tier.color }}
+        />
       </div>
+      <span className="text-[9px] font-semibold mt-1.5 inline-block px-1.5 py-0.5 rounded-full"
+        style={{ color: tier.color, background: `${tier.color}18` }}>
+        {tier.label}
+      </span>
     </div>
   );
 }
@@ -214,7 +168,7 @@ function CardDetailSheet({ card, onClose }: { card: Card; onClose: () => void })
 
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 px-5 pb-8 space-y-5">
-          {/* Card visual (small) */}
+          {/* Card visual */}
           <CreditCardFace card={card} />
 
           {/* Log activity */}
@@ -288,7 +242,7 @@ function CardDetailSheet({ card, onClose }: { card: Card; onClose: () => void })
               <div className="glass-panel p-6 text-center text-white/30 text-sm">No activity yet</div>
             ) : (
               <div className="ios-list">
-                {cardActivity.slice(0, 15).map((a, idx) => (
+                {cardActivity.slice(0, 15).map((a) => (
                   <div key={a.id} className="ios-list-row" data-testid={`activity-row-${a.id}`}>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${a.type === "payment" ? "bg-emerald-500/15" : "bg-blue-500/15"}`}>
                       {a.type === "payment"
@@ -321,7 +275,7 @@ function AddCardSheet({ onAdded }: { onAdded: () => void }) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "", issuer: "", last4: "", cardType: "visa",
-      color: "#1e3a6e", creditLimit: 5000, currentBalance: 0,
+      color: "#1a1a2e", creditLimit: 5000, currentBalance: 0,
       statementBalance: 0, usageGoalPct: 10, dueDay: 15,
       reportingDay: 10, layer: 3, notes: "",
       createdAt: new Date().toISOString(),
@@ -365,14 +319,14 @@ function AddCardSheet({ onAdded }: { onAdded: () => void }) {
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem className="col-span-2">
                   <FormLabel>Card Name</FormLabel>
-                  <FormControl><Input {...field} placeholder="Chase Ink Business Cash" data-testid="input-card-name" /></FormControl>
+                  <FormControl><Input {...field} placeholder="TrueBuild Starter Visa" data-testid="input-card-name" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="issuer" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Issuer</FormLabel>
-                  <FormControl><Input {...field} placeholder="Chase" data-testid="input-issuer" /></FormControl>
+                  <FormControl><Input {...field} placeholder="Visa" data-testid="input-issuer" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -436,7 +390,7 @@ function AddCardSheet({ onAdded }: { onAdded: () => void }) {
                         className={`w-9 h-9 rounded-full transition-all ${field.value === c.value ? "scale-125 ring-2 ring-offset-2 ring-offset-background ring-white/60" : "opacity-70"}`}
                         style={{ backgroundColor: c.value }}
                         onClick={() => field.onChange(c.value)}
-                        data-testid={`color-${c.label.toLowerCase()}`}
+                        data-testid={`color-${c.label.toLowerCase().replace(/\s+/g, "-")}`}
                       />
                     ))}
                   </div>
@@ -459,21 +413,29 @@ export default function Wallet() {
     queryKey: ["/api/cards"],
   });
 
+  const { data: scores = [] } = useQuery<ScoreSnapshot[]>({
+    queryKey: ["/api/scores"],
+  });
+
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   const seedMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/seed"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/cards"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
+    },
   });
 
   const totalCredit   = cards.reduce((s, c) => s + c.creditLimit, 0);
   const totalBalance  = cards.reduce((s, c) => s + c.currentBalance, 0);
   const totalAvailable = totalCredit - totalBalance;
 
+  const latestScore = scores.length > 0 ? scores[scores.length - 1] : null;
+
   if (isLoading) {
     return (
-      <div className="page-content px-4 pt-14 space-y-3">
+      <div className="page-content px-4 pt-14 space-y-3" style={{ background: "#0d0d0d", minHeight: "100dvh" }}>
         <div className="skeleton h-8 w-32" />
         <div className="skeleton h-48 rounded-2xl" />
         <div className="skeleton h-48 rounded-2xl" />
@@ -481,15 +443,14 @@ export default function Wallet() {
     );
   }
 
-  // Card fan: each card peeks at the bottom like Apple Wallet
-  const PEEK = 52; // px each card peeks below the previous
+  const PEEK = 52;
 
   return (
-    <div className="page-content">
+    <div className="page-content" style={{ background: "#0d0d0d", minHeight: "100dvh" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-14 pb-4">
         <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Wallet</h1>
+          <h1 className="text-xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>Wallet</h1>
           <p className="text-xs text-white/40 mt-0.5">{cards.length} cards · ${totalCredit.toLocaleString()} total credit</p>
         </div>
         <AddCardSheet onAdded={() => {}} />
@@ -503,7 +464,7 @@ export default function Wallet() {
             { label: "Balance",   value: `$${totalBalance.toLocaleString()}`,   color: "text-yellow-400" },
             { label: "Available", value: `$${totalAvailable.toLocaleString()}`, color: "text-emerald-400" },
           ].map(p => (
-            <div key={p.label} className="glass-panel flex-shrink-0 px-4 py-2.5 flex flex-col items-center gap-0.5">
+            <div key={p.label} className="flex-shrink-0 px-4 py-2.5 flex flex-col items-center gap-0.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[9px] text-white/35 uppercase tracking-widest">{p.label}</p>
               <p className={`text-sm font-bold ${p.color}`}>{p.value}</p>
             </div>
@@ -511,7 +472,7 @@ export default function Wallet() {
         </div>
       )}
 
-      {/* Apple Wallet card fan */}
+      {/* Apple Wallet card stack */}
       {cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -521,7 +482,7 @@ export default function Wallet() {
             </svg>
           </div>
           <div>
-            <p className="font-semibold mb-1">No cards yet</p>
+            <p className="font-semibold text-white mb-1">No cards yet</p>
             <p className="text-sm text-white/40">Add your TrueBuild cards to start tracking utilization and building credit.</p>
           </div>
           <div className="flex gap-3">
@@ -550,6 +511,39 @@ export default function Wallet() {
                 />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Score panel — SBSS, Paydex, Intelliscore */}
+      {latestScore && (latestScore.sbss !== null || latestScore.paydex !== null || latestScore.intelliscore !== null) && (
+        <div className="px-5 mt-6 mb-6">
+          <p className="section-label mb-3 text-white/50">Bureau Scores</p>
+          <div className="flex gap-3">
+            {latestScore.sbss !== null && (
+              <ScoreTile
+                label="SBSS"
+                value={latestScore.sbss}
+                maxVal={300}
+                tier={sbssTier(latestScore.sbss)}
+              />
+            )}
+            {latestScore.paydex !== null && (
+              <ScoreTile
+                label="Paydex"
+                value={latestScore.paydex}
+                maxVal={100}
+                tier={paydexTier(latestScore.paydex)}
+              />
+            )}
+            {latestScore.intelliscore !== null && (
+              <ScoreTile
+                label="Intelliscore"
+                value={latestScore.intelliscore}
+                maxVal={100}
+                tier={intelliscoreTier(latestScore.intelliscore)}
+              />
+            )}
           </div>
         </div>
       )}
